@@ -46,6 +46,7 @@ def _create_network(ocb, vpc_cidr, subnet_public_cidr, subnet_private_cidr, tag_
     subnet_private = ocb.fcu.create_subnet(vpc.id, subnet_private_cidr)
     ocb.log('Subnet Private {0} created'.format(subnet_private.id), level='info')
     #
+    ocb.fcu.create_tags([vpc.id], {'Name': '{0}'.format(tag_prefix)})
     ocb.fcu.create_tags([subnet_public.id], {'Name': '{0}-public'.format(tag_prefix)})
     ocb.fcu.create_tags([subnet_private.id], {'Name': '{0}-private'.format(tag_prefix)})
     return vpc, subnet_public, subnet_private
