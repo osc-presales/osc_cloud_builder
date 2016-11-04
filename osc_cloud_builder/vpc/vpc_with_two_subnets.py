@@ -18,6 +18,8 @@ __copyright__   = "BSD"
 import time
 import urllib2
 import json
+import re
+from lxml import etree
 from OCBase import OCBase, SLEEP_SHORT
 from tools.wait_for import wait_state
 
@@ -106,9 +108,9 @@ def _create_security_groups(ocb, vpc, tag_prefix):
     sg_private.authorize('tcp', 22, 22, src_group=sg_public)
     return sg_public, sg_private
 
-def _run_instances(ocb, omi_id, nat_omi_id, subnet_public, subnet_private, sg_public, sg_private, key_name, instance_type, tag_prefix):
+def _run_instances(ocb, omi_id, subnet_public, subnet_private, sg_public, sg_private, key_name, instance_type, tag_prefix):
     """
-    Create NAT instance if nat_omi_id is not None and BOUNCER instance in public subnet
+    Create BOUNCER instance in public subnet
     Create 1 instance in the private subnet
     :param ocb: connection object
     :type ocb: OCBase.OCBase
@@ -124,18 +126,9 @@ def _run_instances(ocb, omi_id, nat_omi_id, subnet_public, subnet_private, sg_pu
     :type sg_private: boto.ec2.securitygroup.SecurityGroup
     :param tag_prefix: prefix to be applied on all tags
     :type tag_prefix: str
-    :returns: 3 instances
+    :returns: 2 instances
     :rtype: boto.ec2.instance
     """
-    instance_nat = None
-    if nat_omi_id:
-        instance_nat = ocb.fcu.run_instances(image_id=nat_omi_id,
-                                             min_count=1, max_count=1,
-                                             subnet_id=subnet_public.id,
-                                             security_group_ids=[sg_public.id],
-                                             instance_type=instance_type,
-                                             key_name=key_name).instances[0]
-        ocb.fcu.create_tags([instance_nat.id], {'Name': '{0}-nat'.format(tag_prefix)})
     #
     instance_bouncer = ocb.fcu.run_instances(image_id=omi_id,
                                              min_count=1, max_count=1,
@@ -152,10 +145,27 @@ def _run_instances(ocb, omi_id, nat_omi_id, subnet_public, subnet_private, sg_pu
                                              instance_type=instance_type,
                                              key_name=key_name).instances[0]
     ocb.fcu.create_tags([instance_private.id], {'Name': '{0}-instance-1'.format(tag_prefix)})
-    wait_state([instance_nat, instance_bouncer, instance_private], 'running')
-    return instance_nat, instance_bouncer, instance_private
+    wait_state([instance_bouncer, instance_private], 'running')
+    return instance_bouncer, instance_private
 
-def _configure_network_flows(ocb, vpc, subnet_public, subnet_private, gw, instance_nat):
+def _create_natgateway(ocb, subnet_public):
+    """
+    Create a natgateway, lease an EIP.
+    :param ocb: connection object
+    :type ocb: OCBase.OCBase
+    :param subnet_public: subnet public
+    :type subnet_public: boto.vpc.vpc.SUBNET
+    :returns: nat gateway identifier
+    :rtype: str
+    """
+    ocb.fcu.APIVersion = '2016-04-01'
+    eip = ocb.fcu.allocate_address(domain='vpc')
+    result = ocb.fcu.make_request('CreateNatGateway', params={'AllocationId': eip.allocation_id, 'SubnetId': subnet_public.id}).read()
+    result = re.sub('xmlns=\"[\S]*\"', '', result)
+    tree = etree.fromstring(result)
+    return tree.find('natGateway').find('natGatewayId').text
+
+def _configure_network_flows(ocb, vpc, subnet_public, subnet_private, gw, natgw_id):
     """
     Setup MAIN ROUTE TABLE to route flows to nat_instance
     Create RouteTable for subnet_public to route flows to internet gateway
@@ -169,12 +179,12 @@ def _configure_network_flows(ocb, vpc, subnet_public, subnet_private, gw, instan
     :type subnet_private: boto.vpc.vpc.SUBNET
     :param gw: Internet Gateway
     :type gw: boto.vpc.internetgateway.InternetGateway
-    :param instance_nat: NAT Instance
-    :type instance_nat: boto.ec2.instance
+    :param natgw_id: NatGateway identifier
+    :type natgw_id: str
     """
     main_rt = ocb.fcu.get_all_route_tables(filters={'vpc-id': vpc.id, 'association.main': 'true'})[0]
-    if instance_nat:
-        ocb.fcu.create_route(main_rt.id, '0.0.0.0/0', gateway_id=None, instance_id=instance_nat.id)
+    if natgw_id:
+        ocb.fcu.create_route(main_rt.id, '0.0.0.0/0', natgw_id)
     ocb.fcu.create_tags([main_rt.id], {'Name': 'main for {0}'.format(vpc.id)})
     #
     rt = ocb.fcu.create_route_table(vpc.id)
@@ -184,41 +194,29 @@ def _configure_network_flows(ocb, vpc, subnet_public, subnet_private, gw, instan
     ocb.fcu.associate_route_table(rt.id, subnet_public.id)
     time.sleep(SLEEP_SHORT)
     ocb.fcu.create_route(rt.id, '0.0.0.0/0', gateway_id=gw.id)
-    # Configure NAT Instance to forward packets
-    if instance_nat:
-        ocb.fcu.modify_instance_attribute(instance_nat.id, attribute='sourceDestCheck', value=False)
 
-def _setup_public_ips(ocb, instance_nat, instance_bouncer):
+def _setup_public_ips(ocb, instance_bouncer):
     """
     Create and attach 2 publics IPs to nat and bouncer instances
     :param ocb: connection object
     :type ocb: OCBase.OCBase
-    :param instance_nat: NAT Instance
-    :type instance_nat: boto.ec2.instance
     :param instance_bouncer: Bouncer Instance
     :type instance_bouncer: boto.ec2.instance
 
     """
     public_ip = ocb.fcu.allocate_address("vpc")
-    if instance_nat:
-        ocb.fcu.associate_address(instance_id=instance_nat.id, allocation_id=public_ip.allocation_id)
-        ocb.fcu.modify_instance_attribute(instance_nat.id, attribute='sourceDestCheck', value=False)
-        ocb.fcu.create_tags([instance_nat.id], {'osc.fcu.eip.auto-attach': public_ip.public_ip})
-        ocb.log('NAT Instance {0} has got IP {1}'.format(instance_nat.id, public_ip.public_ip))
-    #
-    public_ip = ocb.fcu.allocate_address("vpc")
     ocb.fcu.associate_address(instance_id=instance_bouncer.id, allocation_id=public_ip.allocation_id)
     ocb.fcu.create_tags([instance_bouncer.id], {'osc.fcu.eip.auto-attach': public_ip.public_ip})
     ocb.log('Boucner Instance {0} has got IP {1}'.format(instance_bouncer.id, public_ip.public_ip), level='info')
 
-def setup_vpc(omi_id, key_name, nat_omi_id=None, vpc_cidr='10.0.0.0/16', subnet_public_cidr='10.0.1.0/24', subnet_private_cidr='10.0.2.0/24', instance_type='t2.medium', tag_prefix=''):
+def setup_vpc(omi_id, key_name, vpc_cidr='10.0.0.0/16', subnet_public_cidr='10.0.1.0/24', subnet_private_cidr='10.0.2.0/24', instance_type='t2.medium', tag_prefix=''):
     """
     Create a VPC with 2 subnets and a nat instance
       - First subnet is public
         - Instance to Bounce
-        - Instance to nat (blackbox)
      - Second subnet is private
         - Instance for fun
+     - A Nat Gateway attached to the public subnet
     :param omi_id: OMI identified
     :type omi_id: str
     :param nat_omi_id: NAT OMI identified
@@ -238,11 +236,10 @@ def setup_vpc(omi_id, key_name, nat_omi_id=None, vpc_cidr='10.0.0.0/16', subnet_
     vpc, subnet_public, subnet_private = _create_network(ocb, vpc_cidr, subnet_public_cidr, subnet_private_cidr, tag_prefix)
     gw = _create_gateway(ocb, vpc)
     sg_public, sg_private = _create_security_groups(ocb, vpc, tag_prefix)
-    instance_nat, instance_bouncer, instance_private = _run_instances(ocb, omi_id, nat_omi_id, subnet_public, subnet_private, sg_public, sg_private, key_name, instance_type, tag_prefix)
-    _configure_network_flows(ocb, vpc, subnet_public, subnet_private, gw, instance_nat)
-    _setup_public_ips(ocb, instance_nat, instance_bouncer)
-    if instance_nat:
-        instance_nat.update()
+    instance_bouncer, instance_private = _run_instances(ocb, omi_id, subnet_public, subnet_private, sg_public, sg_private, key_name, instance_type, tag_prefix)
+    natgw_id = _create_natgateway(ocb, subnet_public)
+    _configure_network_flows(ocb, vpc, subnet_public, subnet_private, gw, natgw_id)
+    _setup_public_ips(ocb, instance_bouncer)
     instance_bouncer.update()
     instance_private.update()
-    return vpc, instance_nat, instance_bouncer, instance_private
+    return vpc, instance_bouncer, instance_private
