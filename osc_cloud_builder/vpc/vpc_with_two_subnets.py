@@ -165,7 +165,7 @@ def _create_natgateway(ocb, subnet_public):
     tree = etree.fromstring(result)
     return tree.find('natGateway').find('natGatewayId').text
 
-def _configure_network_flows(ocb, vpc, subnet_public, subnet_private, gw, natgw_id):
+def _configure_network_flows(ocb, vpc, subnet_public, subnet_private, gw, natgw_id, tag_prefix):
     """
     Setup MAIN ROUTE TABLE to route flows to nat_instance
     Create RouteTable for subnet_public to route flows to internet gateway
@@ -181,14 +181,16 @@ def _configure_network_flows(ocb, vpc, subnet_public, subnet_private, gw, natgw_
     :type gw: boto.vpc.internetgateway.InternetGateway
     :param natgw_id: NatGateway identifier
     :type natgw_id: str
+    :param tag_prefix: prefix to be applied on all tags
+    :type tag_prefix: str
     """
     main_rt = ocb.fcu.get_all_route_tables(filters={'vpc-id': vpc.id, 'association.main': 'true'})[0]
     if natgw_id:
         ocb.fcu.create_route(main_rt.id, '0.0.0.0/0', natgw_id)
-    ocb.fcu.create_tags([main_rt.id], {'Name': 'main for {0}'.format(vpc.id)})
+    ocb.fcu.create_tags([main_rt.id], {'Name': 'main-'.format(tag_prefix)})
     #
     rt = ocb.fcu.create_route_table(vpc.id)
-    ocb.fcu.create_tags([rt.id], {'Name': 'second for {0}'.format(vpc.id)})
+    ocb.fcu.create_tags([rt.id], {'Name': 'second-'.format(tag_prefix)})
     time.sleep(SLEEP_SHORT)
     ocb.log('Creatting Route Table {0}'.format(rt.id), level='info')
     ocb.fcu.associate_route_table(rt.id, subnet_public.id)
@@ -238,7 +240,7 @@ def setup_vpc(omi_id, key_name, vpc_cidr='10.0.0.0/16', subnet_public_cidr='10.0
     sg_public, sg_private = _create_security_groups(ocb, vpc, tag_prefix)
     instance_bouncer, instance_private = _run_instances(ocb, omi_id, subnet_public, subnet_private, sg_public, sg_private, key_name, instance_type, tag_prefix)
     natgw_id = _create_natgateway(ocb, subnet_public)
-    _configure_network_flows(ocb, vpc, subnet_public, subnet_private, gw, natgw_id)
+    _configure_network_flows(ocb, vpc, subnet_public, subnet_private, gw, natgw_id, tag_prefix)
     _setup_public_ips(ocb, instance_bouncer)
     instance_bouncer.update()
     instance_private.update()
