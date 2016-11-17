@@ -163,7 +163,9 @@ def _create_natgateway(ocb, subnet_public):
     result = ocb.fcu.make_request('CreateNatGateway', params={'AllocationId': eip.allocation_id, 'SubnetId': subnet_public.id}).read()
     result = re.sub('xmlns=\"[\S]*\"', '', result)
     tree = etree.fromstring(result)
-    return tree.find('natGateway').find('natGatewayId').text
+    natgateway_id = tree.find('natGateway').find('natGatewayId').text
+    ocb.log('Creatting NatGateway {0}'.format(natgateway_id), level='info')
+    return natgateway_id
 
 def _configure_network_flows(ocb, vpc, subnet_public, subnet_private, gw, natgw_id, tag_prefix):
     """
@@ -221,8 +223,6 @@ def setup_vpc(omi_id, key_name, vpc_cidr='10.0.0.0/16', subnet_public_cidr='10.0
      - A Nat Gateway attached to the public subnet
     :param omi_id: OMI identified
     :type omi_id: str
-    :param nat_omi_id: NAT OMI identified
-    :type nat_omi_id: str
     :param key_name: key pair name
     :type key_name: str
     :param vpc_cidr: vpc cidr
