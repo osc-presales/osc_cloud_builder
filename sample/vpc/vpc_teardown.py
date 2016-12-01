@@ -98,15 +98,17 @@ def teardown(vpc_to_delete, terminate_instances=False):
 
     time.sleep(SLEEP_SHORT)
 
-
-    # Delete nat gateways
-    # Note : Can not manage multiple natgateway for now
-    ocb.fcu.APIVersion = '2017-01-01'
-    nat_gateway = ocb.fcu.make_request('DescribeNatGateways', params={'Filter.1.Name': 'vpc-id', 'Filter.1.Value.1': vpc_to_delete}).read()
-    nat_gateway = re.sub('xmlns=\"[\S]*\"', '', nat_gateway).split('\n')[1]
-    tree = etree.fromstring(nat_gateway)
-    nat_gateway_id = tree.find('natGatewaySet').find('item').find('natGatewayId').text
-    ocb.fcu.make_request('DeleteNatGateway', params={'NatGatewayId': nat_gateway_id})
+    try:
+        # Delete nat gateways
+        # Note : Can not manage multiple natgateway for now
+        ocb.fcu.APIVersion = '2017-01-01'
+        nat_gateway = ocb.fcu.make_request('DescribeNatGateways', params={'Filter.1.Name': 'vpc-id', 'Filter.1.Value.1': vpc_to_delete}).read()
+        nat_gateway = re.sub('xmlns=\"[\S]*\"', '', nat_gateway).split('\n')[1]
+        tree = etree.fromstring(nat_gateway)
+        nat_gateway_id = tree.find('natGatewaySet').find('item').find('natGatewayId').text
+        ocb.fcu.make_request('DeleteNatGateway', params={'NatGatewayId': nat_gateway_id})
+    except:
+        pass
 
     # Delete routes
     for rt in ocb.fcu.get_all_route_tables(filters={'vpc-id': vpc_to_delete}):
