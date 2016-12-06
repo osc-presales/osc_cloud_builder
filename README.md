@@ -55,5 +55,5 @@ This file contains the OCBase class with boto connectors to:
 ### ./osc_cloud_builder/tools/
 This directory contains common tools.
 
-### ./samples/
+### ./osc_cloud_builder/samples/
 This directory contain useful samples.
