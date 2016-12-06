@@ -43,7 +43,7 @@ class OCBase(object):
 
     __metaclass__ = Singleton
 
-    def __init__(self, region='eu-west-2', settings_paths=['~/.osc_cloud_builder/services.ini', '/etc/osc_cloud_builder/services.ini'], is_secure=True, debug_filename='/tmp/ocb.log', debug_level='INFO'):
+    def __init__(self, region='eu-west-2', settings_paths=['~/.osc_cloud_builder/services.ini', '/etc/osc_cloud_builder/services.ini'], is_secure=True, boto_debug=0, debug_filename='/tmp/ocb.log', debug_level='INFO'):
         """
         :param region: region choosen for loading settings.ini section
         :type region: str
@@ -51,13 +51,15 @@ class OCBase(object):
         :type settings_paths: list
         :param is_secure: allow connector without ssl
         :type is_secure: bool
+        :param boto_debug: debug level for boto
+        :type boto_debug: int
         :param debug_filename: File to store logs
         :type debug_filename: str
         """
         self.__logger_setup(debug_filename, debug_level)
         self.region = region
         self.settings_paths = settings_paths
-        self.__connections_setup(is_secure)
+        self.__connections_setup(is_secure, boto_debug)
 
     def __logger_setup(self, debug_filename, debug_level):
         """
@@ -126,11 +128,13 @@ class OCBase(object):
         return fcu_endpoint, lbu_endpoint, eim_endpoint, osu_endpoint
 
 
-    def __connections_setup(self, is_secure):
+    def __connections_setup(self, is_secure, boto_debug):
         """
         Creates FCU, OSU and EIM connections if endpoints are configured
         :param is_secure: allow connection without SSL
         :type is_secure: bool
+        :param boto_debug: debug level for boto
+        :type boto_debug: int
         :raises OCBError: When connections can not be created because AK and SK are not set up in environment variable
         """
         access_key_id = os.environ.get('AWS_ACCESS_KEY_ID', None)
@@ -143,20 +147,20 @@ class OCBase(object):
 
         if fcu_endpoint:
             fcu_endpoint = EC2RegionInfo(endpoint=fcu_endpoint)
-            self.fcu = VPCConnection(access_key_id, secret_access_key, region=fcu_endpoint, is_secure=is_secure)
+            self.fcu = VPCConnection(access_key_id, secret_access_key, region=fcu_endpoint, is_secure=is_secure, debug=boto_debug)
         else:
             self.__logger.info('No FCU connection configured')
             self.fcu = None
 
         if lbu_endpoint:
             lbu_endpoint = EC2RegionInfo(endpoint=lbu_endpoint)
-            self.lbu = ELBConnection(access_key_id, secret_access_key, region=lbu_endpoint)
+            self.lbu = ELBConnection(access_key_id, secret_access_key, region=lbu_endpoint, debug=boto_debug)
         else:
             self.__logger.info('No LBU connection configured')
             self.lbu = None
 
         if eim_endpoint:
-            self.eim = IAMConnection(access_key_id, secret_access_key, host=eim_endpoint)
+            self.eim = IAMConnection(access_key_id, secret_access_key, host=eim_endpoint, debug=boto_debug)
         else:
             self.__logger.info('No EIM connection configured')
             self.eim = None
