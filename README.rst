@@ -1,4 +1,6 @@
-# OSC Cloud Builder
+####
+ OSC Cloud Builder
+####
 
 The **OCB** project provides tools as snippets and modules.
 
@@ -12,7 +14,8 @@ Introduction
 Setup
 ******
 
-# Cloud account setup
+Cloud account setup
+-------------------
 First of all, in order to run scripts you have to setup your Cloud account via environment variables.
 Setup of the following variables:
 * export AWS_ACCESS_KEY_ID=XXXX424242XXXX
@@ -25,7 +28,8 @@ Then you have to setup the region
 * export OSU_ENDPOINT=osu.<REGION_NAME>.outscale.com
 
 # Configure PYTHONPATH
-Go to root of this project, then run:
+------------------------
+If you are not using this project as a package, go to root of this project, then run:
 
 > $>export PYTHONPATH=$PYTHONPATH:$PWD/osc_cloud_builder
 
@@ -43,17 +47,20 @@ This script aim to be used in a python intepreter (ptpython or bpython for insta
 > >>> ocb.fcu.get_only_instances()
 > [Instance:i-c90defd4, Instance:i-d74aaf02]
 
-# Directories
-## ./osc_cloud_builder/
-## OCBase.py
+
+-------------
+Directories
+-------------
+* ./osc_cloud_builder/
+* OCBase.py
 This file contains the OCBase class with boto connectors to:
 - FCU
 - EIM
 - LBU
 - OSU
 
-### ./osc_cloud_builder/tools/
+* ./osc_cloud_builder/tools/
 This directory contains common tools.
 
-### ./osc_cloud_builder/samples/
+* ./osc_cloud_builder/samples/
 This directory contain useful samples.
