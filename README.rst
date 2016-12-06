@@ -33,8 +33,10 @@ How to use it
 
 From package
 --------------
+Just import OCBase
 
 ::
+
    >>>from osc_cloud_builder.OCBase import OCBase
 
 From repository
