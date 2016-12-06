@@ -19,15 +19,17 @@ Cloud account setup
 First of all, in order to run scripts you have to setup your Cloud account via environment variables.
 Setup of the following variables:
 
-- Security informations
-  + export AWS_ACCESS_KEY_ID=XXXX424242XXXX
-  + export AWS_SECRET_ACCESS_KEY=YYYYY4242YYYYY
+ Security informations
+-----------------------
+- export AWS_ACCESS_KEY_ID=XXXX424242XXXX
+- export AWS_SECRET_ACCESS_KEY=YYYYY4242YYYYY
 
-- Setup the region
-  + export FCU_ENDPOINT=fcu.<REGION_NAME>.outscale.com
-  + export LBU_ENDPOINT=lbu.<REGION_NAME>.outscale.com
-  + export EIM_ENDPOINT=eim.<REGION_NAME>.outscale.com
-  + export OSU_ENDPOINT=osu.<REGION_NAME>.outscale.com
+Setup the region
+------------------
+- export FCU_ENDPOINT=fcu.<REGION_NAME>.outscale.com
+- export LBU_ENDPOINT=lbu.<REGION_NAME>.outscale.com
+- export EIM_ENDPOINT=eim.<REGION_NAME>.outscale.com
+- export OSU_ENDPOINT=osu.<REGION_NAME>.outscale.com
 
 
 How to use it
