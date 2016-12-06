@@ -40,13 +40,17 @@ From package
 From repository
 ----------------
 If you are not using this project as a package, go to root of this project and configure your PYTHONPATH. At the root of the project directory run:
+
 ::
+
    $>export PYTHONPATH=$PYTHONPATH:$PWD/osc_cloud_builder
    $>python
    >>>from OCBase import OCBase
 
+
 Quick start:
 --------------
+
 ::
 
    >>>ocb = OCBase()
