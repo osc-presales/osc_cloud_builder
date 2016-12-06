@@ -55,11 +55,5 @@ This file contains the OCBase class with boto connectors to:
 ### ./osc_cloud_builder/tools/
 This directory contains common tools.
 
-### ./osc_cloud_builder/vpc/
-Scripts to be used in your samples
-Contains scripts to :
- - deploy a vpc with instances.
- - teardown any vpc given in parameter
-
 ### ./samples/
 This directory contain useful samples.
