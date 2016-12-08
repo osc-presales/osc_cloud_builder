@@ -20,8 +20,8 @@ import urllib2
 import json
 import re
 from lxml import etree
-from OCBase import OCBase, SLEEP_SHORT
-from tools.wait_for import wait_state
+from osc_cloud_builder.OCBase import OCBase, SLEEP_SHORT
+from osc_cloud_builder.tools.wait_for import wait_state
 
 
 def _create_network(ocb, vpc_cidr, subnet_public_cidr, subnet_private_cidr, tag_prefix):

@@ -8,7 +8,7 @@ __author__      = "Heckle"
 __copyright__   = "BSD"
 
 import time
-from OCBase import SLEEP_SHORT
+from osc_cloud_builder.OCBase import SLEEP_SHORT
 
 def wait_state(objs, state_name, timeout=120):
     """

@@ -11,8 +11,8 @@ __copyright__   = "BSD"
 import time
 import re
 from lxml import etree
-from OCBase import OCBase, SLEEP_SHORT
-from tools.wait_for import wait_state
+from osc_cloud_builder.OCBase import OCBase, SLEEP_SHORT
+from osc_cloud_builder.tools.wait_for import wait_state
 from boto.exception import EC2ResponseError
 
 def teardown(vpc_to_delete, terminate_instances=False):

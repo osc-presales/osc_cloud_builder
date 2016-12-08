@@ -8,7 +8,7 @@ __copyright__   = "BSD"
 
 import os
 from datetime import datetime
-from OCBase import OCBase
+from osc_cloud_builder.OCBase import OCBase
 
 
 def create_key_pair(key_pair_name=None, key_directory='/tmp/keytest.rsa.d/'):

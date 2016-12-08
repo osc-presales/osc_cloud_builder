@@ -9,8 +9,8 @@ Requirements:
 __author__      = "Heckle"
 __copyright__   = "BSD"
 
-from OCBase import OCBase
-from tools.create_key_pair import create_key_pair
+from osc_cloud_builder.OCBase import OCBase
+from osc_cloud_builder.tools.create_key_pair import create_key_pair
 from vpc import vpc_with_two_subnets, vpc_teardown
 from fabric.api import run, env
 
