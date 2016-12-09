@@ -9,8 +9,7 @@ __copyright__   = "BSD"
 
 
 import time
-import re
-from lxml import etree
+from boto.ec2.ec2object import EC2Object
 from osc_cloud_builder.OCBase import OCBase, SLEEP_SHORT
 from osc_cloud_builder.tools.wait_for import wait_state
 from boto.exception import EC2ResponseError
@@ -100,15 +99,15 @@ def teardown(vpc_to_delete, terminate_instances=False):
 
     try:
         # Delete nat gateways
-        # Note : Can not manage multiple natgateway for now
+        # get_object is not able to manage a collection, so using subnet-id as differentiating
         ocb.fcu.APIVersion = '2017-01-01'
-        nat_gateway = ocb.fcu.make_request('DescribeNatGateways', params={'Filter.1.Name': 'vpc-id', 'Filter.1.Value.1': vpc_to_delete}).read()
-        nat_gateway = re.sub('xmlns=\"[\S]*\"', '', nat_gateway).split('\n')[1]
-        tree = etree.fromstring(nat_gateway)
-        nat_gateway_id = tree.find('natGatewaySet').find('item').find('natGatewayId').text
-        ocb.fcu.make_request('DeleteNatGateway', params={'NatGatewayId': nat_gateway_id})
-    except:
-        pass
+        for msubnet in ocb.fcu.get_all_subnets(filters={'vpc-id': vpc_to_delete}):
+            nat_gateway = ocb.fcu.get_object('DescribeNatGateways', {'Filter.1.Name': 'vpc-id', 'Filter.1.Value.1': vpc_to_delete, 'Filter.2.Name': 'subnet-id', 'Filter.2.Value.1': msubnet.id}, EC2Object)
+            if hasattr(nat_gateway, 'natGatewayId'):
+                ocb.fcu.make_request('DeleteNatGateway', params={'NatGatewayId': nat_gateway.natGatewayId})
+                ocb.log('Deleting natGateway {0}'.format(nat_gateway.natGatewayId), 'info')
+    except Exception as err:
+        ocb.log('Can not delete natgateway because: {0}'.format(err.message), 'warning')
 
     # Delete routes
     for rt in ocb.fcu.get_all_route_tables(filters={'vpc-id': vpc_to_delete}):

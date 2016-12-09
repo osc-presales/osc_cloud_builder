@@ -18,8 +18,7 @@ __copyright__   = "BSD"
 import time
 import urllib2
 import json
-import re
-from lxml import etree
+from boto.ec2.ec2object import EC2Object
 from osc_cloud_builder.OCBase import OCBase, SLEEP_SHORT
 from osc_cloud_builder.tools.wait_for import wait_state
 
@@ -160,12 +159,9 @@ def _create_natgateway(ocb, subnet_public):
     """
     ocb.fcu.APIVersion = '2016-04-01'
     eip = ocb.fcu.allocate_address(domain='vpc')
-    result = ocb.fcu.make_request('CreateNatGateway', params={'AllocationId': eip.allocation_id, 'SubnetId': subnet_public.id}).read()
-    result = re.sub('xmlns=\"[\S]*\"', '', result)
-    tree = etree.fromstring(result)
-    natgateway_id = tree.find('natGateway').find('natGatewayId').text
-    ocb.log('Creatting NatGateway {0}'.format(natgateway_id), level='info')
-    return natgateway_id
+    nat_gw = ocb.fcu.get_object('CreateNatGateway', {'AllocationId': eip.allocation_id, 'SubnetId': subnet_public.id}, EC2Object)
+    ocb.log('Creating NatGateway {0}'.format(nat_gw.natGatewayId), level='info')
+    return nat_gw.natGatewayId
 
 def _configure_network_flows(ocb, vpc, subnet_public, subnet_private, gw, natgw_id, tag_prefix):
     """
@@ -194,7 +190,7 @@ def _configure_network_flows(ocb, vpc, subnet_public, subnet_private, gw, natgw_
     rt = ocb.fcu.create_route_table(vpc.id)
     ocb.fcu.create_tags([rt.id], {'Name': 'second-'.format(tag_prefix)})
     time.sleep(SLEEP_SHORT)
-    ocb.log('Creatting Route Table {0}'.format(rt.id), level='info')
+    ocb.log('Creating Route Table {0}'.format(rt.id), level='info')
     ocb.fcu.associate_route_table(rt.id, subnet_public.id)
     time.sleep(SLEEP_SHORT)
     ocb.fcu.create_route(rt.id, '0.0.0.0/0', gateway_id=gw.id)
