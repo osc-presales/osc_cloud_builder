@@ -157,7 +157,7 @@ def _create_natgateway(ocb, subnet_public):
     :returns: nat gateway identifier
     :rtype: str
     """
-    ocb.fcu.APIVersion = '2016-04-01'
+    ocb.fcu.APIVersion = '2016-11-15'
     eip = ocb.fcu.allocate_address(domain='vpc')
     nat_gw = ocb.fcu.get_object('CreateNatGateway', {'AllocationId': eip.allocation_id, 'SubnetId': subnet_public.id}, EC2Object)
     ocb.log('Creating NatGateway {0}'.format(nat_gw.natGatewayId), level='info')

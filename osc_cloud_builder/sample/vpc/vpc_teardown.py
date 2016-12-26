@@ -100,7 +100,7 @@ def teardown(vpc_to_delete, terminate_instances=False):
     try:
         # Delete nat gateways
         # get_object is not able to manage a collection, so using subnet-id as differentiating
-        ocb.fcu.APIVersion = '2017-01-01'
+        ocb.fcu.APIVersion = '2016-11-15'
         for msubnet in ocb.fcu.get_all_subnets(filters={'vpc-id': vpc_to_delete}):
             nat_gateway = ocb.fcu.get_object('DescribeNatGateways', {'Filter.1.Name': 'vpc-id', 'Filter.1.Value.1': vpc_to_delete, 'Filter.2.Name': 'subnet-id', 'Filter.2.Value.1': msubnet.id}, EC2Object)
             if hasattr(nat_gateway, 'natGatewayId'):
