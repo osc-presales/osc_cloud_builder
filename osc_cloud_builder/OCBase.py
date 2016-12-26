@@ -97,6 +97,17 @@ class OCBase(object):
             settings_path = '{0}/../services.ini'.format(base_path)
         settings.read(filenames=settings_path)
 
+
+        access_key_id = os.environ.get('AWS_ACCESS_KEY_ID', None)
+        secret_access_key = os.environ.get('AWS_SECRET_ACCESS_KEY', None)
+        if not access_key_id or secret_access_key:
+            try:
+                access_key_id = settings.get(self.region, 'access_key_id', None)
+                secret_access_key = settings.get(self.region, 'secret_access_key', None)
+            except ConfigParser.Error:
+                self.__logger.critical('You must setup both AWS_ACCESS_KEY_ID and AWS_SECRET_ACCESS_KEY environment variable or in your settings.ini file')
+                raise OCBError('Bad credential (access_key_id, secret_access_key) setup')
+
         fcu_endpoint = os.environ.get('FCU_ENDPOINT', None)
         if not fcu_endpoint:
             try:
@@ -125,7 +136,7 @@ class OCBase(object):
             except ConfigParser.Error:
                 self.log('No osu_endpoint set', 'warning')
 
-        return fcu_endpoint, lbu_endpoint, eim_endpoint, osu_endpoint
+        return access_key_id, secret_access_key, fcu_endpoint, lbu_endpoint, eim_endpoint, osu_endpoint
 
 
     def __connections_setup(self, is_secure, boto_debug):
@@ -137,13 +148,8 @@ class OCBase(object):
         :type boto_debug: int
         :raises OCBError: When connections can not be created because AK and SK are not set up in environment variable
         """
-        access_key_id = os.environ.get('AWS_ACCESS_KEY_ID', None)
-        secret_access_key = os.environ.get('AWS_SECRET_ACCESS_KEY', None)
-        if not access_key_id or not secret_access_key:
-            self.__logger.critical('You must setup both AWS_ACCESS_KEY_ID and AWS_SECRET_ACCESS_KEY environment variable')
-            raise OCBError('Bad credential (access_key_id, secret_access_key) setup')
 
-        fcu_endpoint, lbu_endpoint, eim_endpoint, osu_endpoint = self.__load_config()
+        access_key_id, secret_access_key, fcu_endpoint, lbu_endpoint, eim_endpoint, osu_endpoint = self.__load_config()
 
         if fcu_endpoint:
             fcu_endpoint = EC2RegionInfo(endpoint=fcu_endpoint)
